@@ -30,7 +30,7 @@ R_type= {
 
 def R_encode(operation, rd, rs1, rs2):
     funct7, funct3, opcode= R_type[operation]
-    return funct7+Register_file[rs2]+Register_file[rs1]+funct3+Register_file[rd]+opcode
+    print(funct7+Register_file[rs2]+Register_file[rs1]+funct3+Register_file[rd]+opcode)
 
 def throw_error(msg, lineno):
     print(f"Error at lineno {lineno}: {msg}")
