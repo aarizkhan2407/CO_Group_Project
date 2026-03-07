@@ -140,245 +140,247 @@ for lineno, line in enumerate(lines):    #First pass
 
 VirtualHault = False
 OutputLines = []
-with open(output_file, "w") as fout:
 
-    PC = 0
+PC = 0
 
-    for lineno, line in enumerate(lines):
-        lineno+=1
+for lineno, line in enumerate(lines):
+    lineno+=1
 
-        line = line.split("#")[0].strip()
+    line = line.split("#")[0].strip()
+
+    if not line:
+        continue
+
+    if ":" in line:
+        label, line = line.split(":", 1)
+
+        line = line.strip()   
 
         if not line:
             continue
 
-        if ":" in line:
-            label, line = line.split(":", 1)
+    line = line.replace(",", " ")
+    parts = line.split()
 
-            line = line.strip()   
+    operation = parts[0]
 
-            if not line:
-                continue
+    # R-TYPE
+    if operation in R_type:
 
-        line = line.replace(",", " ")
-        parts = line.split()
+        if len(parts) != 4:
+            throw_error("Invalid operand count", lineno)
 
-        operation = parts[0]
+        rd, rs1, rs2 = parts[1], parts[2], parts[3]
 
-        # R-TYPE
-        if operation in R_type:
+        Valid_Register(rd, lineno)
+        Valid_Register(rs1, lineno)
+        Valid_Register(rs2, lineno)
 
-            if len(parts) != 4:
-                throw_error("Invalid operand count", lineno)
+        binary = (
+            R_type[operation][0]
+            + Register_file[rs2]
+            + Register_file[rs1]
+            + R_type[operation][1]
+            + Register_file[rd]
+            + R_type[operation][2]
+        )
 
-            rd, rs1, rs2 = parts[1], parts[2], parts[3]
+        OutputLines.append(binary)
+    
+    # I-TYPE
+    elif operation in I_type:
+        
+        funct3, opcode = I_type[operation]
+
+        if operation == "addi" or operation=="sltiu":
+            rd = parts[1]
+            rs1 = parts[2]
 
             Valid_Register(rd, lineno)
             Valid_Register(rs1, lineno)
-            Valid_Register(rs2, lineno)
 
-            binary = (
-                R_type[operation][0]
-                + Register_file[rs2]
-                + Register_file[rs1]
-                + R_type[operation][1]
-                + Register_file[rd]
-                + R_type[operation][2]
-            )
+            imm = int(parts[3])
 
-            fout.write(binary + "\n")
+            Valid_immediate(imm, 12, lineno)
         
-        # I-TYPE
-        elif operation in I_type:
-            
-            funct3, opcode = I_type[operation]
-
-            if operation == "addi" or operation=="sltiu":
-                rd = parts[1]
-                rs1 = parts[2]
-
-                Valid_Register(rd)
-                Valid_Register(rs1)
-
-                imm = int(parts[3])
-
-                Valid_immediate(imm, 12, lineno)
-            
-            elif operation == "jalr" or operation == "lw":
-                rd = parts[1]
-                imm_rs1 = parts[2]
-                imm_str, rs1_str = imm_rs1.split("(")
-                imm = int(imm_str)
-                
-                rs1 = rs1_str.replace(")", "")
-
-                Valid_Register(rs1, lineno)
-                Valid_Register(rd, lineno)
-
-                Valid_immediate(imm, 12, lineno)
-
-            imm_bin = BinaryEncoding(imm, 12)
-
-            binary = (
-                imm_bin
-                + Register_file[rs1]
-                + funct3
-                + Register_file[rd]
-                + opcode
-                )
-                
-            fout.write(binary + "\n")
-        
-        # S-TYPE
-        elif operation in S_type:
-
-            funct3, opcode = S_type[operation]
-
-            rs2 = parts[1]
+        elif operation == "jalr" or operation == "lw":
+            rd = parts[1]
             imm_rs1 = parts[2]
-
-            str_imm, rs1_str = imm_rs1.split("(")
-            imm = int(str_imm)
-
+            imm_str, rs1_str = imm_rs1.split("(")
+            imm = int(imm_str)
+            
             rs1 = rs1_str.replace(")", "")
 
             Valid_Register(rs1, lineno)
+            Valid_Register(rd, lineno)
+
             Valid_immediate(imm, 12, lineno)
 
-            imm_bin = BinaryEncoding(imm, 12)
+        imm_bin = BinaryEncoding(imm, 12)
 
-            upper_imm = imm_bin[:7]
-            lower_imm = imm_bin[7:]
-
-            binary = (
-                upper_imm
-                + Register_file[rs2]
-                + Register_file[rs1]
-                + funct3
-                + lower_imm
-                + opcode
-                )
+        binary = (
+            imm_bin
+            + Register_file[rs1]
+            + funct3
+            + Register_file[rd]
+            + opcode
+            )
             
-            fout.write(binary + "\n")
+        OutputLines.append(binary)
+    
+    # S-TYPE
+    elif operation in S_type:
+
+        funct3, opcode = S_type[operation]
+
+        rs2 = parts[1]
+        imm_rs1 = parts[2]
+
+        str_imm, rs1_str = imm_rs1.split("(")
+        imm = int(str_imm)
+
+        rs1 = rs1_str.replace(")", "")
+
+        Valid_Register(rs1, lineno)
+        Valid_immediate(imm, 12, lineno)
+
+        imm_bin = BinaryEncoding(imm, 12)
+
+        upper_imm = imm_bin[:7]
+        lower_imm = imm_bin[7:]
+
+        binary = (
+            upper_imm
+            + Register_file[rs2]
+            + Register_file[rs1]
+            + funct3
+            + lower_imm
+            + opcode
+            )
         
-        # B-TYPE
-        elif operation in B_type:
+        OutputLines.append(binary)
+    
+    # B-TYPE
+    elif operation in B_type:
 
-            if len(parts)!=4:
-                throw_error("Invalid operand count", lineno)
+        if len(parts)!=4:
+            throw_error("Invalid operand count", lineno)
 
-            funct3, opcode = B_type[operation]
+        funct3, opcode = B_type[operation]
 
-            rs1 = parts[1]
-            rs2 = parts[2]
-            label = parts[3]
+        rs1 = parts[1]
+        rs2 = parts[2]
+        label = parts[3]
 
-            Valid_Register(rs1, lineno)
-            Valid_Register(rs2, lineno)
+        Valid_Register(rs1, lineno)
+        Valid_Register(rs2, lineno)
 
+        if operation == "beq" and rs1 == "zero" and rs2 =="zero" and label == "0":
+            VirtualHault = True
+            offset = 0
+
+        else:
             if label not in labels:
                 throw_error("Undefined label", lineno)
             
             target = labels[label]
-
             offset = target - PC
 
-            Valid_immediate(offset, 13, lineno)
+        Valid_immediate(offset, 13, lineno)
 
-            if operation == "beq":
-                if rs1 == "zero" and rs2 == "zero" and label == "0":
-                    VirtualHault = True
+        imm = BinaryEncoding(offset, 13)
 
-            imm = BinaryEncoding(offset, 13)
+        imm12 = imm[0]
+        imm10_5 = imm[2:8]
+        imm4_1 = imm[8:12]
+        imm11 = imm[1]
 
-            imm12 = imm[0]
-            imm10_5 = imm[2:7]
-            imm4_1 = imm[7:11]
-            imm11 = imm[1]
+        binary = (
+            imm12
+        + imm10_5
+        + Register_file[rs2]
+        + Register_file[rs1]
+        + funct3
+        + imm4_1
+        + imm11
+        + opcode
+        )
 
-            binary = (
-                imm12
-            + imm10_5
-            + Register_file[rs2]
-            + Register_file[rs1]
-            + funct3
-            + imm4_1
-            + imm11
-            + opcode
-            )
+        OutputLines.append(binary)
 
-            fout.write(binary + "\n")
-
-        elif operation in U_type:
+    elif operation in U_type:
+        
+        if len(parts) != 3:
+            throw_error("Invalid operand count", lineno)
             
-            if len(parts) != 3:
-                throw_error("Invalid operand count", lineno)
+        rd = parts[1]
+            
+        if rd not in Register_file:
+            throw_error("Invalid register", lineno)
                 
-                rd = parts[1]
-                
-                if rd not in Register_file:
-                    throw_error("Invalid register", lineno)
-                    
-                imm = int(parts[2])
+        imm = int(parts[2])
 
-                Valid_immediate(imm, 20, lineno)
+        Valid_immediate(imm, 20, lineno)
 
-                imm_bin = BinaryEncoding(imm, 20)
-                
-                opcode = U_type[operation]
-                binary = (
-                    imm_bin
-                    + Register_file[rd]
-                    + opcode
-                    )
-                
-                fout.write(binary + "\n")
-
-        elif operation in  J_type:
-
-            if len(parts)!=3:
-                throw_error("Invalid operand count", lineno)
-
-            rd = parts[1]
-            label = parts[2]
-
-            if rd not in Register_file:
-                throw_error("Invalid Register", lineno)
-
-            if label not in labels:
-                throw_error("Inavlid label", lineno)
-
-            target = labels[label]
-            offest = target - PC
-
-            Valid_immediate(offest, 21, lineno)
-
-            imm_bin = BinaryEncoding(offset, 21)
-
-            imm20 = imm_bin[20]
-            imm19_12 = imm_bin[1:9]
-            imm11 = imm_bin[9]
-            imm10_1 = imm_bin[10:20]
-
-            opcode = J_type[operation]
-
-            binary = (
-                imm20
-            + imm10_1
-            + imm11
-            + imm19_12
+        imm_bin = BinaryEncoding(imm, 20)
+            
+        opcode = U_type[operation]
+        binary = (
+            imm_bin
             + Register_file[rd]
             + opcode
             )
+            
+        OutputLines.append(binary)
 
-            fout.write(binary+"\n")
+    elif operation in  J_type:
 
-        else:
-            throw_error("Invalid instruction", lineno)
+        if len(parts)!=3:
+            throw_error("Invalid operand count", lineno)
 
-        PC += 4
+        rd = parts[1]
+        label = parts[2]
 
-    if not VirtualHault:
-        print("Missing Virtual Hault")
-        sys.exit(1)
+        if rd not in Register_file:
+            throw_error("Invalid Register", lineno)
 
+        if label not in labels:
+            throw_error("Inavlid label", lineno)
+
+        target = labels[label]
+        offest = target - PC
+
+        Valid_immediate(offest, 21, lineno)
+
+        imm_bin = BinaryEncoding(offset, 21)
+
+        imm20 = imm_bin[20]
+        imm19_12 = imm_bin[1:9]
+        imm11 = imm_bin[9]
+        imm10_1 = imm_bin[10:20]
+
+        opcode = J_type[operation]
+
+        binary = (
+            imm20
+        + imm10_1
+        + imm11
+        + imm19_12
+        + Register_file[rd]
+        + opcode
+        )
+
+        OutputLines.append(binary)
+
+    else:
+        throw_error("Invalid instruction", lineno)
+
+    PC += 4
+
+if not VirtualHault:
+    print("Missing Virtual Hault")
+    sys.exit(1)
+
+with open(output_file, "w") as fout:
+    for line in OutputLines:
+        fout.write(line + "\n")

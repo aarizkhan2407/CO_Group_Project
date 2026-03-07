@@ -36,3 +36,5 @@ addi s2,s2,1   # should still be encoded even though jump occurs
 
 end:
 add s3,s3,s3
+
+beq zero,zero,0
