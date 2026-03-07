@@ -98,6 +98,17 @@ def BinaryEncoding(value, bits):
         value= (1<<bits) + value
     return format(value, f'0{bits}b')
 
+def Valid_Register(reg, lineno):
+    if reg not in Register_file:
+        throw_error("Invalid Register", lineno)
+
+def Valid_immediate(value, bits, lineno):
+    minVal = -(1 << (bits-1))
+    maxVal = (1 << (bits-1)) - 1
+
+    if (value < minVal) or (value > maxVal):
+        throw_error("Immediate out of Range", lineno)
+
 labels = {}
 PC = 0
 
@@ -127,6 +138,8 @@ for lineno, line in enumerate(lines):    #First pass
 
     PC+=4
 
+VirtualHault = False
+OutputLines = []
 with open(output_file, "w") as fout:
 
     PC = 0
@@ -160,6 +173,10 @@ with open(output_file, "w") as fout:
 
             rd, rs1, rs2 = parts[1], parts[2], parts[3]
 
+            Valid_Register(rd, lineno)
+            Valid_Register(rs1, lineno)
+            Valid_Register(rs2, lineno)
+
             binary = (
                 R_type[operation][0]
                 + Register_file[rs2]
@@ -179,7 +196,13 @@ with open(output_file, "w") as fout:
             if operation == "addi" or operation=="sltiu":
                 rd = parts[1]
                 rs1 = parts[2]
+
+                Valid_Register(rd)
+                Valid_Register(rs1)
+
                 imm = int(parts[3])
+
+                Valid_immediate(imm, 12, lineno)
             
             elif operation == "jalr" or operation == "lw":
                 rd = parts[1]
@@ -188,6 +211,11 @@ with open(output_file, "w") as fout:
                 imm = int(imm_str)
                 
                 rs1 = rs1_str.replace(")", "")
+
+                Valid_Register(rs1, lineno)
+                Valid_Register(rd, lineno)
+
+                Valid_immediate(imm, 12, lineno)
 
             imm_bin = BinaryEncoding(imm, 12)
 
@@ -213,6 +241,9 @@ with open(output_file, "w") as fout:
             imm = int(str_imm)
 
             rs1 = rs1_str.replace(")", "")
+
+            Valid_Register(rs1, lineno)
+            Valid_immediate(imm, 12, lineno)
 
             imm_bin = BinaryEncoding(imm, 12)
 
@@ -242,12 +273,22 @@ with open(output_file, "w") as fout:
             rs2 = parts[2]
             label = parts[3]
 
+            Valid_Register(rs1, lineno)
+            Valid_Register(rs2, lineno)
+
             if label not in labels:
                 throw_error("Undefined label", lineno)
             
             target = labels[label]
 
             offset = target - PC
+
+            Valid_immediate(offset, 13, lineno)
+
+            if operation == "beq":
+                if rs1 == "zero" and rs2 == "zero" and label == "0":
+                    VirtualHault = True
+
             imm = BinaryEncoding(offset, 13)
 
             imm12 = imm[0]
@@ -279,6 +320,9 @@ with open(output_file, "w") as fout:
                     throw_error("Invalid register", lineno)
                     
                 imm = int(parts[2])
+
+                Valid_immediate(imm, 20, lineno)
+
                 imm_bin = BinaryEncoding(imm, 20)
                 
                 opcode = U_type[operation]
@@ -307,6 +351,8 @@ with open(output_file, "w") as fout:
             target = labels[label]
             offest = target - PC
 
+            Valid_immediate(offest, 21, lineno)
+
             imm_bin = BinaryEncoding(offset, 21)
 
             imm20 = imm_bin[20]
@@ -331,4 +377,8 @@ with open(output_file, "w") as fout:
             throw_error("Invalid instruction", lineno)
 
         PC += 4
+
+    if not VirtualHault:
+        print("Missing Virtual Hault")
+        sys.exit(1)
 
