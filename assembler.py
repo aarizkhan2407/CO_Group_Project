@@ -1,12 +1,15 @@
 import sys
 
-if ( len(sys.argv) )!=3:
+if ( len(sys.argv) ) < 3:
     print("Usage: assembler.py <input.asm> <output.bin>")
     sys.exit(1)
 
 input_file= sys.argv[1]
 output_file= sys.argv[2]
 
+if len(sys.argv) > 3:
+    readable_file = sys.argv[3]
+    
 Register_file = {
     "zero": "00000",
     "ra":   "00001",
