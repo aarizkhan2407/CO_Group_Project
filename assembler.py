@@ -206,7 +206,7 @@ for lineno, line in enumerate(lines):
 
             Valid_immediate(imm, 12, lineno)
         
-        elif operation == "jalr" or operation == "lw":
+        elif operation == "lw":
             rd = parts[1]
             imm_rs1 = parts[2]
             imm_str, rs1_str = imm_rs1.split("(")
@@ -217,6 +217,20 @@ for lineno, line in enumerate(lines):
             Valid_Register(rs1, lineno)
             Valid_Register(rd, lineno)
 
+            Valid_immediate(imm, 12, lineno)
+
+        elif operation == "jalr":
+            
+            if len(parts) != 4:
+                throw_error("Invalid operand count", lineno)
+                
+            rd = parts[1]
+            rs1 = parts[2]
+            imm = int(parts[3])
+                
+            Valid_Register(rd, lineno)
+            Valid_Register(rs1, lineno)
+                
             Valid_immediate(imm, 12, lineno)
 
         imm_bin = BinaryEncoding(imm, 12)
