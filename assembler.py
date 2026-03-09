@@ -365,13 +365,13 @@ for lineno, line in enumerate(lines):
             throw_error("Inavlid label", lineno)
 
         target = labels[label]
-        offest = target - PC
+        offset = target - PC
 
-        Valid_immediate(offest, 21, lineno)
+        Valid_immediate(offset, 21, lineno)
 
         imm_bin = BinaryEncoding(offset, 21)
 
-        imm20 = imm_bin[20]
+        imm20 = imm_bin[0]
         imm19_12 = imm_bin[1:9]
         imm11 = imm_bin[9]
         imm10_1 = imm_bin[10:20]
