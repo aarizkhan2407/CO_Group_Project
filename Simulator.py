@@ -243,6 +243,7 @@ def decode_and_execute(pc):
         return (pc + offset) if taken else (pc + 4)
 
     # U-type lui  0110111
+
     elif opcode == 0b0110111:
         rd  = bits(word, 11,  7)
         imm = sign_extend(bits(word, 31, 12) << 12, 32)
@@ -264,7 +265,9 @@ def decode_and_execute(pc):
         imm_raw = (bits(word, 31, 31) << 20) | (bits(word, 19, 12) << 12) | \
                   (bits(word, 20, 20) << 11) | (bits(word, 30, 21) <<  1)
         offset  = sign_extend(imm_raw, 21)
+
         # Jump target NOT validated — spec guarantees all control flow is valid
+
         reg_write(rd, pc + 4)
         return to32u(pc + offset) & ~1
 
@@ -306,7 +309,7 @@ else:
     print("Warning: execution limit reached without halt")
 
 
-#  Write output file:
+#  Output file:
 #  1. Register trace (one line per instruction executed, including halt)
 #  2. Memory dump (32 data memory locations, only after successful halt)
 
