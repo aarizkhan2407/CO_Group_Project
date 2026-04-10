@@ -16,14 +16,14 @@ output_file = sys.argv[2]
 #  SP init     : 0x0000017C
 
 
-PROG_MEM_BASE  = 0x00000000
-PROG_MEM_END   = 0x000000FF
-STACK_MEM_BASE = 0x00000100
-STACK_MEM_END  = 0x0000017F
-DATA_MEM_BASE  = 0x00010000
-DATA_MEM_END   = 0x0001007F
+prog_base = 0x00000000
+prog_limit = 0x000000FF
+stack_base = 0x00000100
+stack_end = 0x0000017F
+data_base = 0x00010000
+data_end = 0x0001007F
 
-memory    = {}
+memory = {}
 registers = [0] * 32
 registers[2] = 0x0000017C   # sp  initialised per spec
 
@@ -71,8 +71,8 @@ def bits(word, hi, lo):
 
 
 def is_valid_data_addr(addr):
-    return (STACK_MEM_BASE <= addr <= STACK_MEM_END) or \
-           (DATA_MEM_BASE  <= addr <= DATA_MEM_END)
+    return (stack_base <= addr <= stack_end) or \
+           (data_base  <= addr <= data_end)
 
 def mem_write(addr, value, pc):
     addr = to32u(addr)
@@ -92,9 +92,6 @@ def mem_read_instr(addr):
     # Instruction fetch from program memory — no bounds check needed
     return memory.get(to32u(addr), 0)
 
-
-
-#  Register write (x0 hardwired to 0)
 
 
 def reg_write(rd, value):
@@ -121,7 +118,7 @@ for idx, b in enumerate(prog_lines):
     if len(b) != 32 or not all(c in '01' for c in b):
         print("Error at line {}: invalid binary word '{}'".format(idx + 1, b))
         sys.exit(1)
-    memory[PROG_MEM_BASE + idx * 4] = int(b, 2)
+    memory[prog_base + idx * 4] = int(b, 2)
 
 
 #  Decode and execute one instruction
@@ -290,8 +287,8 @@ def format_reg_line(pc):
 
 #  Main execution loop
 
-pc        = PROG_MEM_BASE
-MAX_STEPS = 100000   # safety limit against infinite loops
+pc        = prog_base
+MAX_STEPS = 100000   # not sure if needed but kept for safety so that the prog does not enter an infinite loop
 step      = 0
 
 while step < MAX_STEPS:
@@ -321,7 +318,7 @@ with open(output_file, "w") as fout:
     # Memory dump after successful halt
 
     for i in range(32):
-        addr      = DATA_MEM_BASE + i * 4
+        addr      = data_base + i * 4
         value     = memory.get(addr, 0)
         addr_hex  = format(addr, '08X')
         value_bin = "0b" + format(to32u(value), "032b")
